@@ -16,7 +16,7 @@ from state import AgentState
 from config import config
 from tools import get_search_tool
 
-# ── LLM
+# LLM
 # think=True — researcher benefits from reasoning through what to search for
 _llm = ChatOllama(
     model=config.model,
@@ -26,7 +26,8 @@ _llm = ChatOllama(
 
 _search: BaseTool = get_search_tool()
 
-# ── Spinner
+
+# Spinner
 def _spin(label: str, stop_event: threading.Event, start: float):
     frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
     i = 0
@@ -52,7 +53,8 @@ def _timed_invoke(llm, messages, label: str):
         sys.stdout.flush()
     return result
 
-# ── Prompts
+
+# Prompts
 QUERY_SYSTEM = """You are a research assistant.
 Given a task, generate 1-3 focused search queries that will retrieve the most
 relevant information. Return ONLY the queries, one per line, no numbering."""
@@ -61,7 +63,8 @@ SUMMARISE_SYSTEM = """You are a research analyst.
 Summarise the following search results into bullet-point findings relevant to
 the task. Be factual and concise. Omit irrelevant results."""
 
-# ── Node
+
+# Node
 def researcher_node(state: AgentState) -> AgentState:
     """Run web searches and append summarised findings to research_results."""
     # 1. Generate search queries

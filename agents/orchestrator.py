@@ -15,7 +15,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from state import AgentState
 from config import config
 
-# ── LLM
+# LLM
 # think=False - routing needs a fast single-word reply, not a reasoning chain
 _llm = ChatOllama(
     model=config.model,
@@ -29,7 +29,8 @@ _assembler_llm = ChatOllama(
     extra_body={"think": True},   # assembler benefits from careful reasoning
 )
 
-# ── Spinner
+
+# Spinner
 def _spin(label: str, stop_event: threading.Event, start: float):
     frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
     i = 0
@@ -55,7 +56,8 @@ def _timed_invoke(llm, messages, label: str):
         sys.stdout.flush()
     return result
 
-# ── Prompts
+
+# Prompts
 ROUTER_SYSTEM = """You are an orchestrator in a multi-agent system.
 Your job is to analyse a task and decide which specialist agent should handle it next.
 
@@ -75,7 +77,8 @@ ASSEMBLER_SYSTEM = """You are a senior analyst.
 Given a task and all research/execution results collected so far, write a clear,
 well-structured final answer for the user. Be concise but complete."""
 
-# ── Nodes
+
+# Nodes
 def orchestrator_router(state: AgentState) -> AgentState:
     """Decide which agent runs next."""
     iteration = state.get("iteration", 0)

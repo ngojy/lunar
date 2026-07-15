@@ -15,7 +15,7 @@ from state import AgentState
 from config import config
 from tools import get_python_repl_tool
 
-# ── LLM
+# LLM
 # think=True — writing correct code benefits from step-by-step reasoning
 _llm = ChatOllama(
     model=config.model,
@@ -25,7 +25,8 @@ _llm = ChatOllama(
 
 _repl = get_python_repl_tool()
 
-# ── Spinner
+
+# Spinner
 def _spin(label: str, stop_event: threading.Event, start: float):
     frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
     i = 0
@@ -51,7 +52,8 @@ def _timed_invoke(llm, messages, label: str):
         sys.stdout.flush()
     return result
 
-# ── Prompts
+
+# Prompts
 CODE_SYSTEM = """You are a Python expert.
 Write a self-contained Python script that solves the task below.
 - Use only the standard library unless the task explicitly requires third-party packages.
@@ -59,7 +61,8 @@ Write a self-contained Python script that solves the task below.
 - Keep the code concise and correct.
 - Return ONLY the raw Python code, no markdown fences, no explanation."""
 
-# ── Node
+
+# Node
 def executor_node(state: AgentState) -> AgentState:
     """Generate Python code for the task and execute it."""
 

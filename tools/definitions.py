@@ -12,7 +12,7 @@ from langchain_experimental.tools import PythonREPLTool
 from langchain.tools import tool
 from config.settings import config
 
-# ── Web search
+# Web search
 def get_search_tool(max_results: int | None = None) -> TavilySearchResults:
     """Return a configured Tavily web-search tool."""
     return TavilySearchResults(
@@ -20,7 +20,8 @@ def get_search_tool(max_results: int | None = None) -> TavilySearchResults:
         tavily_api_key=config.tavily_api_key,
     )
 
-# ── Code execution
+
+# Code execution
 def get_python_repl_tool() -> PythonREPLTool:
     """Return a sandboxed Python REPL tool."""
     return PythonREPLTool()
@@ -35,7 +36,8 @@ def summarise_list(items: list[str]) -> str:
     """Join a list of strings into a numbered summary."""
     return "\n".join(f"{i + 1}. {item}" for i, item in enumerate(items))
 
-# ── Tool registry
+
+# Tool registry
 ALL_TOOLS = [
     get_search_tool(),
     get_python_repl_tool(),

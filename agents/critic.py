@@ -15,7 +15,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from state import AgentState
 from config import config
 
-# ── LLM
+# LLM
 # think=False — critic is doing a pass/fail check, not complex reasoning
 _llm = ChatOllama(
     model=config.model,
@@ -23,7 +23,8 @@ _llm = ChatOllama(
     extra_body={"think": False},
 )
 
-# ── Spinner
+
+# Spinner
 def _spin(label: str, stop_event: threading.Event, start: float):
     frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
     i = 0
@@ -49,7 +50,8 @@ def _timed_invoke(llm, messages, label: str):
         sys.stdout.flush()
     return result
 
-# ── Prompt
+
+# Prompt
 CRITIC_SYSTEM = """You are a rigorous critic in a multi-agent AI system.
 Your job is to review the work done so far and identify any issues.
 
@@ -61,7 +63,8 @@ For each issue, note:
 If the work is complete and correct, reply with exactly: LGTM
 """
 
-# ── Node
+
+# Node
 def critic_node(state: AgentState) -> AgentState:
     """Review accumulated results and write a critique."""
 
