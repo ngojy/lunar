@@ -1,6 +1,9 @@
 """
 Graph definition — wires all agent nodes together using LangGraph.
 """
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from langgraph.graph import StateGraph, END
 

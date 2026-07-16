@@ -7,18 +7,33 @@ PythonREPL is a sandboxed code executor.
 Add new tools here and import them into the relevant agent.
 """
 
-from langchain_community.tools.tavily_search import TavilySearchResults
+import os
+from dotenv import load_dotenv
+from langchain_tavily import TavilySearch
 from langchain_experimental.tools import PythonREPLTool
 from langchain.tools import tool
 from config.settings import config
 
+load_dotenv()
+
+tavily_api_key = os.getenv("TAVILY_API_KEY", "")
+
+
 # Web search
-def get_search_tool(max_results: int | None = None) -> TavilySearchResults:
-    """Return a configured Tavily web-search tool."""
-    return TavilySearchResults(
-        max_results=max_results or config.max_research_results,
-        tavily_api_key=config.tavily_api_key,
-    )
+if tavily_api_key:
+    from langchain_tavily import TavilySearch
+ 
+    def get_search_tool(max_results: int = 5):
+        """Return a configured Tavily web-search tool."""
+        return TavilySearch(api_key=tavily_api_key, max_results=max_results)
+else:
+    @tool
+    def _dummy_search(query: str) -> str:
+        """Search the web for information."""
+        return "[Web search unavailable — add TAVILY_API_KEY to .env to enable it]"
+ 
+    def get_search_tool(max_results: int = 5):
+        return _dummy_search
 
 
 # Code execution
@@ -26,6 +41,8 @@ def get_python_repl_tool() -> PythonREPLTool:
     """Return a sandboxed Python REPL tool."""
     return PythonREPLTool()
 
+
+# Custom tools
 @tool
 def word_count(text: str) -> int:
     """Count the number of words in a piece of text."""

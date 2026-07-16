@@ -1,11 +1,13 @@
 """
 Entry point for the multi-agent system.
 Usage:
-    python main.py                              # interactive prompt
+    ~~                              # interactive prompt
     python main.py "What is LangGraph?"         # one-shot from CLI arg
 """
-
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import uuid
 from pprint import pformat
 from config import config
