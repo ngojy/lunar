@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+langchain
+langchain-ollama
+langchain-community
+langchain-experimental
+langchain-tavily
+langgraph
