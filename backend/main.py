@@ -47,11 +47,13 @@ class ChatResponse(BaseModel):
 
 
 # endpoints
+# /health: GET, Check if the service is runnign
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "lunar API", "version": "1.0.0"}
 
 
+# /chat: POST, send a message to the agent and get a response
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     task = request.message.strip()
@@ -76,3 +78,45 @@ def chat(request: ChatRequest):
             "metadata": {}
         }
         
+        run_config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+        final_state = None
+
+        for step in agent_app.run(initial_state, run_config):
+            node_name, node_state = next(iter(step.items()))
+            final_state = node_state
+
+            for msg in node_state.get("message", []):
+                role = msg.get("role", node_name)
+                content = msg.get("content", "")
+                steps.append(AgentStep(
+                    agent=role,
+                    message=content,
+                    timestamp=datetime.now().isoformat()
+                ))
+        
+        answer = (final_state or {}).get("final_answer", "No answer generated.")
+        duration = (datetime.now() - start_time).total_seconds()
+
+        response = ChatResponse(
+            id=str(uuid.uuid4()),
+            task=task,
+            answer=answer,
+            steps=steps,
+            duration_seconds=round(duration, 2),
+            timestamp=start_time.isoformat()
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
+
+
+# /history: GET, retrieve the conversation history
+@app.get("/history")
+def get_history():
+    return {"history": conversation_history}
+
+# /history: DELETE, clear the conversation history
+@app.delete("/history")
+def clear_history():
+    conversation_history.clear()
+    return {"message": "Historycleared"}
