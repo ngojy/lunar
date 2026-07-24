@@ -1,122 +1,122 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect, useRef } from "react"
+import ChatPanel from "./components/ChatPanel"
+import ActivityPanel from "./components/ActivityPanel"
+import HistoryPanel from "./components/HistoryPanel"
+import type { ChatMessage, AgentStep } from "./types"
+import { sendMessage, getHistory, clearHistory, checkHealth } from "./api"
+import "./App.css"
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+    const [messages, setMessages]         = useState<ChatMessage[]>([]) // messages: all chat messages shown in ChatPanel
+    const [history, setHistory]           = useState<ChatMessage[]>([]) // history: past conversations shown in HistoryPanel
+    const [liveSteps, setLiveSteps]       = useState<AgentStep[]>([]) // liveSteps: agent steps shown in ActivityPanel
+    const [currentAgent, setCurrentAgent] = useState<string>("") // currentAgent: shows which agent is running right now
+    const [isLoading, setIsLoading]       = useState(false) // isLoading: shows whether the system is processing
+    const [input, setInput]               = useState("") // input: text in the input box
+    const [status, setStatus]             = useState<"online" | "offline" | "checking">("checking") // status: shows whether the backend is online
+    const inputRef = useRef<HTMLInputElement>(null)
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    useEffect(() => {
+        checkHealth().then((ok) => setStatus(ok ? "online" : "offline"))
+        getHistory().then(setHistory)
+    }, [])
+
+    async function handleSend() {
+        if (!input.trim() || isLoading) return
+
+        const task = input.trim()
+        setInput("")
+        setIsLoading(true)
+        setLiveSteps([])
+        setCurrentAgent("orchestrator")
+
+        try{
+            const response = await sendMessage(task)
+            setMessages((prev) => [...prev, response]) // prev => [...prev, response]: safe way to update arrays in React state, never mutate state directly
+            setHistory((prev) => [...prev, response])
+            setLiveSteps(response.steps)
+            setCurrentAgent("")
+        } catch (err) {
+            console.error(err)
+            setCurrentAgent("")
+        } finally {
+        setIsLoading(false)
+        inputRef.current?.focus()
+        }
+    }
+
+    async function handleClearHistory() {
+        await clearHistory()
+        setHistory([])
+    }
+
+    function handleSelectHistory(msg: ChatMessage) {
+        setMessages((prev) => {
+            const exists = prev.find((m) => m.id === msg.id)
+            if (exists) return prev
+            return [...prev, msg]
+        })
+        setLiveSteps(msg.steps)
+    }
+
+
+    const statusColour =
+        status === "online" ? "#69f0ae" :
+        status === "offline" ? "#ff5252" : "#ffd740"
+
+    const statusText =
+        status === "online" ? "● Online" :
+        status === "offline" ? "● Offline" : "● Connecting..."
+
+    return (
+        <div className="app">
+            <header className="titlebar">
+                <div className="titlebar-left">
+                    <span className="logo">🌙</span>
+                    <span className="app-name">Lunar</span>
+                    <span className="app-subtitle">Multi-Agent System</span>
+                </div>
+                <div className="titlebar-right">
+                    <span style={{ color: statusColour }}>{statusText}</span>
+                </div>
+            </header>
+
+            <div className="layout">
+                <div className="left-col">
+                    <ChatPanel messages={messages} isLoading={isLoading} />
+                    <div className="input-row">
+                        <input
+                            ref={inputRef}
+                            className="chat-input"
+                            placeholder="Ask Lunar anything..."
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                            disabled={isLoading}
+                        />
+                        <button
+                            className="send-btn"
+                            onClick={handleSend}
+                            disabled={isLoading || !input.trim()}
+                        >
+                            {isLoading ? "..." : "Send"}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="right-col">
+                    <ActivityPanel
+                        steps={liveSteps}
+                        isLoading={isLoading}
+                        currentAgent={currentAgent}
+                    />
+                    <HistoryPanel
+                        history={history}
+                        onSelect={handleSelectHistory}
+                        onClear={handleClearHistory}
+                    />
+                </div>
+            </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    )
 }
-
-export default App
