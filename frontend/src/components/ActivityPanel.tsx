@@ -1,5 +1,5 @@
 import {useEffect, useRef } from "react"
-import { AgentStep } from "../types"
+import type { AgentStep } from "../types"
 
 interface Props {
     steps: AgentStep[]
@@ -8,13 +8,17 @@ interface Props {
 }
 
 
-// AGENT_COLORS: maps each agent name to a color
 const AGENT_COLORS: Record<string, string> = {
-    orchestrator: "light blue",
-    researcher: "purple",
-    executor: "yellow",
+    session_context: "slate blue",
+    router: "light blue",
+    planning: "gold",
+    retrieval: "teal",
+    tools_registry: "green",
+    research_specialist: "purple",
+    coding_specialist: "orange",
+    synthesizer: "magenta",
     critic: "red",
-    assembler: "green",
+    finish: "blue",
     system: "blue",
 }
 
