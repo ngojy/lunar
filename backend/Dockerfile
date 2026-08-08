@@ -14,5 +14,8 @@ COPY . .
 # docker listens on port 8000
 EXPOSE 8000
 
+# volume for persistent data (checkpoints, RAG DB, ChromaDB)
+VOLUME ["/app/data"]
+
 # command to run when container starts
 CMD ["uvicorn", "server:api", "--host", "0.0.0.0", "--port", "8000"]
