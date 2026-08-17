@@ -14,19 +14,39 @@ class AgentState(TypedDict):
     # The user's original task/request
     task: str
 
-    # Which agent runs next (set by orchestrator)
-    next_agent: str
+    # Session and Memory Context
+    session_id: str
+    conversation_history: list[dict]
+    session_context: str
 
-    # Structured results from each specialist agent
-    research_results: list[str]
-    execution_results: list[str]
-    critique: str
+    # Router Decisions
+    router_decision: dict[str, Any]
+    needs_reasoning: bool
+    needs_retrieval: bool
+    needs_tools: bool
+    specialist_types: list[str]
+    needs_synthesis: bool
 
-    # Final answer assembled by the orchestrator
-    final_answer: str
+    # Planning (Optional)
+    reasoning_plan: str
 
-    # Iteration counter to prevent infinite loops
-    iteration: int
+    # Parallel Capabilities Output
+    retrieval_results: list[dict]
+    available_tools: list[dict]
+    specialist_results: dict[str, str]
+
+    # Final Response
+    final_response: str
+    synthesis_performed: bool
+
+    # Critic Control
+    should_critique: bool
+    critique_performed: bool
+    critique_feedback: str
+    critique_suggestions: list[str]
 
     # Arbitrary metadata agents can stash
     metadata: dict[str, Any]
+
+    # Per-agent model overrides (agent_name -> model_string)
+    agent_model_settings: dict[str, str]
