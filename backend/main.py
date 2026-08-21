@@ -1,15 +1,12 @@
 """
 Entry point for the multi-agent system.
-Usage:
-    ~~                              # interactive prompt
-    python main.py "What is LangGraph?"         # one-shot from CLI arg
 """
+
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import uuid
-from pprint import pformat
 from config import config
 from graph import app
 
@@ -29,13 +26,27 @@ def run(task: str, verbose: bool = True) -> str:
     initial_state = {
         "task": task,
         "messages": [{"role": "user", "content": task}],
-        "next_agent": "",
-        "research_results": [],
-        "execution_results": [],
-        "critique": "",
-        "final_answer": "",
-        "iteration": 0,
+        "router_decision": {},
+        "needs_reasoning": False,
+        "needs_retrieval": False,
+        "needs_tools": False,
+        "specialist_types": [],
+        "needs_synthesis": False,
+        "reasoning_plan": "",
+        "retrieval_results": [],
+        "available_tools": [],
+        "specialist_results": {},
+        "final_response": "",
+        "synthesis_performed": False,
+        "should_critique": False,
+        "critique_performed": False,
+        "critique_feedback": "",
+        "critique_suggestions": [],
         "metadata": {},
+        "session_id": str(uuid.uuid4()),
+        "conversation_history": [],
+        "session_context": "",
+        "agent_model_settings": {},
     }
 
     # thread_id scopes the checkpointer (one conversation = one thread)
@@ -59,7 +70,7 @@ def run(task: str, verbose: bool = True) -> str:
                 content = msg.get("content", "")
                 print(f"[{role.upper()}] {content}")
 
-    answer = (final_state or {}).get("final_answer", "No answer produced.")
+    answer = (final_state or {}).get("final_response", "No answer produced.")
 
     if verbose:
         print(f"\n{'='*60}")
