@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { ChatMessage } from "../types"
+import { parseMarkdown, renderMarkdown } from "../utils/markdownRenderer"
 
 
 // props: data passes into a component from its parent
@@ -7,7 +8,7 @@ interface Props {
     messages: ChatMessage[]
     isLoading: boolean
     pendingMessage: string
-    selectedModel: string
+    currentAgent?: string
 }
 
 
@@ -24,36 +25,14 @@ function formatModeLabel(mode?: "chat" | "agent") {
     return "Chat"
 }
 
-function LoadingIndicator({ selectedModel }: { selectedModel: string }) {
-    const [elapsed, setElapsed] = useState(0)
-
-    useEffect(() => {
-        const start = Date.now()
-        const interval = setInterval(() => {
-            setElapsed(((Date.now() - start) / 1000))
-        }, 100)
-        return () => clearInterval(interval)
-    }, [])
-
-    return (
-        <div className="message nova">
-            <div className="message-label">{selectedModel || "Model"}</div>
-            <div className="message-bubble nova-bubble loading-bubble">
-                <span className="dot" />
-                <span className="dot" />
-                <span className="dot" />
-                <span className="loading-timer">{elapsed.toFixed(1)}s</span>
-            </div>
-        </div>
-    )
-}
-
 // message.map(): loops over every message and renders a pair of bubbles (user+Lunar)
 // key={msg.id}: React needs a unique key on each item in a list to track changes efficiently
 // ref={bottomref}: an invisible div at the bottom. useEffect scrolls to it every time messages updates so the chat always shows the latest message
-// {isLoading && (...)}: only renders the loading dots when isLoading is true
-export default function ChatPanel({ messages, isLoading, pendingMessage, selectedModel }: Props) {
+// {isLoading && (...)}: shows loading indicator in the message bubble when waiting for response
+export default function ChatPanel({ messages, isLoading, pendingMessage, currentAgent }: Props) {
     const bottomRef = useRef<HTMLDivElement>(null)
+    const [elapsed, setElapsed] = useState(0)
+    const [expandedDocMessageId, setExpandedDocMessageId] = useState<string | null>(null)
 
     function formatTokenRate(msg: ChatMessage) {
         if (!msg.duration_seconds || msg.duration_seconds <= 0) {
@@ -77,6 +56,19 @@ export default function ChatPanel({ messages, isLoading, pendingMessage, selecte
         bottomRef.current?.scrollIntoView({ behavior: "smooth" })
     }, [messages, isLoading, pendingMessage])
 
+    useEffect(() => {
+        if (!isLoading) {
+            setElapsed(0)
+            return
+        }
+
+        const start = Date.now()
+        const interval = setInterval(() => {
+            setElapsed(((Date.now() - start) / 1000))
+        }, 100)
+        return () => clearInterval(interval)
+    }, [isLoading])
+
     return (
         <div className="chat-panel">
             <div className="panel-label">Chat</div>
@@ -89,7 +81,13 @@ export default function ChatPanel({ messages, isLoading, pendingMessage, selecte
                     </div>
                 )}
 
-                {messages.map((msg) => (
+                {messages.map((msg, index) => {
+                    const isCurrentMessage = index === messages.length - 1 && isLoading && msg.answer === ""
+                    const agentLabel = currentAgent 
+                        ? `${currentAgent.charAt(0).toUpperCase() + currentAgent.slice(1)} is analyzing...`
+                        : "Processing..."
+
+                    return (
                     <div key={msg.id} className="message-group">
                         <div className="message you">
                             <div className="message-label">
@@ -110,41 +108,63 @@ export default function ChatPanel({ messages, isLoading, pendingMessage, selecte
                             </div>
                             <div className="nova-message-content">
                                 <div className="message-bubble nova-bubble">
-                                    {msg.answer.split("\n").map((line, i) => (
-                                        <p key={i}>{line}</p>
-                                    ))}
+                                    {isCurrentMessage ? (
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <span className="loading-text">{agentLabel}</span>
+                                            <span className="loading-timer">{elapsed.toFixed(1)}s</span>
+                                        </div>
+                                    ) : (
+                                        <div className="markdown-content">
+                                            {renderMarkdown(parseMarkdown(msg.answer))}
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="message-meta-row">
-                                    <span className="message-token-usage">
-                                        {formatTokenRate(msg)}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        className="message-copy-btn"
-                                        onClick={() => handleCopy(msg.answer)}
-                                        title="Copy response"
-                                        aria-label="Copy response"
-                                    >
-                                        ⧉
-                                    </button>
-                                </div>
+                                {!isCurrentMessage && (
+                                    <div className="message-meta-row">
+                                        <span className="message-token-usage">
+                                            {formatTokenRate(msg)}
+                                        </span>
+                                        {msg.retrieved_documents && msg.retrieved_documents.length > 0 && (
+                                            <button
+                                                type="button"
+                                                className="message-docs-btn"
+                                                onClick={() => setExpandedDocMessageId(expandedDocMessageId === msg.id ? null : msg.id)}
+                                                title={`${msg.retrieved_documents.length} document(s) used`}
+                                                aria-label={`Show ${msg.retrieved_documents.length} document(s)`}
+                                            >
+                                                📚 {msg.retrieved_documents.length}
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            className="message-copy-btn"
+                                            onClick={() => handleCopy(msg.answer)}
+                                            title="Copy response"
+                                            aria-label="Copy response"
+                                        >
+                                            ⧉
+                                        </button>
+                                    </div>
+                                )}
+                                {expandedDocMessageId === msg.id && msg.retrieved_documents && msg.retrieved_documents.length > 0 && (
+                                    <div className="message-docs-list">
+                                        <div className="message-docs-header">📚 Retrieved Documents</div>
+                                        {msg.retrieved_documents.map((doc) => (
+                                            <div key={`${msg.id}-doc-${doc.doc_id}`} className="message-doc-item">
+                                                <div className="message-doc-name">{doc.filename}</div>
+                                                <div className="message-doc-meta">
+                                                    <span className="message-doc-score">Score: {(doc.relevance_score * 100).toFixed(1)}%</span>
+                                                    {doc.chunk_count && <span className="message-doc-chunks">{doc.chunk_count} chunk(s)</span>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
-                ))}
-
-                {/* Show pending user message while loading */}
-                {isLoading && pendingMessage && (
-                    <div className="message-group">
-                        <div className="message you">
-                            <div className="message-label">You</div>
-                            <div className="message-bubble you-bubble">
-                                {pendingMessage}
-                            </div>
-                        </div>
-                        <LoadingIndicator selectedModel={selectedModel} />
-                    </div>
-                )}
+                    )
+                })}
 
                 <div ref={bottomRef} />
             </div>
