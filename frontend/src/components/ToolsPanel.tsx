@@ -2,6 +2,8 @@ import { useRef, useState } from "react"
 import type { ToolSettings } from "../types"
 import { AGENT_NAMES, getAgentDisplayName } from "../modelSettings"
 import ModelDetector from "./ModelDetector"
+import StoragePanel from "./StoragePanel"
+import AgentMemoryPanel from "./AgentMemoryPanel"
 
 interface Props {
     settings: ToolSettings
@@ -15,6 +17,8 @@ const TABS = [
     { id: "general", label: "General" },
     { id: "display", label: "Display" },
     { id: "rag", label: "RAG" },
+    { id: "agent-memory", label: "Agent Memory" },
+    { id: "storage", label: "Storage" },
 ]
 
 function SliderToggle({
@@ -39,6 +43,8 @@ export default function ToolsPanel({ settings, onChange, availableModels, onClos
     const ragRef = useRef<HTMLDivElement | null>(null)
     const generalRef = useRef<HTMLDivElement | null>(null)
     const displayRef = useRef<HTMLDivElement | null>(null)
+    const agentMemoryRef = useRef<HTMLDivElement | null>(null)
+    const storageRef = useRef<HTMLDivElement | null>(null)
     const [search, setSearch] = useState("")
 
     const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
@@ -46,6 +52,8 @@ export default function ToolsPanel({ settings, onChange, availableModels, onClos
         general: generalRef,
         display: displayRef,
         rag: ragRef,
+        "agent-memory": agentMemoryRef,
+        storage: storageRef,
     }
 
     function scrollTo(id: string) {
@@ -78,6 +86,7 @@ export default function ToolsPanel({ settings, onChange, availableModels, onClos
     const ragMatches = !query || "rag retrieval files docs database embedding chunk sqlite postgres mysql".includes(query)
     const generalMatches = !query || "general your name user name personalize".includes(query)
     const displayMatches = !query || "display agent activity panel".includes(query)
+    const agentMemoryMatches = !query || "agent memory facts experiences rules learning behavior".includes(query)
 
     const filteredAgentNames = AGENT_NAMES.filter((agent) => {
         if (!query) return true
@@ -399,6 +408,32 @@ export default function ToolsPanel({ settings, onChange, availableModels, onClos
                                 </div>
                             </div>
                         )}
+
+                        <div className="tools-page-separator" />
+
+                        {agentMemoryMatches && (
+                            <div ref={agentMemoryRef} className="tools-section-block">
+                                <div className="tools-section-title">Agent Memory</div>
+                                <div className="tools-section-desc">
+                                    Store and manage facts, experiences, and behavioral rules for agents.
+                                </div>
+                                <div className="tools-separator" />
+                                <AgentMemoryPanel
+                                    settings={settings.agentMemorySettings}
+                                    onChange={(agentMemorySettings) =>
+                                        onChange({ ...settings, agentMemorySettings })
+                                    }
+                                />
+                            </div>
+                        )}
+
+                        <div className="tools-page-separator" />
+
+                        {
+                            <div ref={storageRef} className="tools-section-block">
+                                <StoragePanel onClose={onClose} />
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
