@@ -18,6 +18,7 @@ class AgentState(TypedDict):
     session_id: str
     conversation_history: list[dict]
     session_context: str
+    agent_memory: list[dict]  # Retrieved relevant memories
 
     # Router Decisions
     router_decision: dict[str, Any]
