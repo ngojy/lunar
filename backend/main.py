@@ -46,6 +46,7 @@ def run(task: str, verbose: bool = True) -> str:
         "session_id": str(uuid.uuid4()),
         "conversation_history": [],
         "session_context": "",
+        "agent_memory": [],
         "agent_model_settings": {},
     }
 
