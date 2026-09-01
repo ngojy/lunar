@@ -17,6 +17,8 @@ from config import config, detect_available_models
 from langchain_ollama import ChatOllama
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from routes.storage import router as storage_router
+from routes.memory import router as memory_router
+from rag_hybrid import sqlite_manager
 
 
 api = FastAPI(title="lunar API", version="1.0.0")
@@ -32,11 +34,15 @@ api.add_middleware(
 
 # Include storage routes
 api.include_router(storage_router)
+# Include memory routes
+api.include_router(memory_router)
 
 
-# in-memory storage, stores past conversations while container is running. This is not persistent storage, so if the container is restarted, the conversation history will be lost.
+# Persistent storage comment - using SQLite via memory_integration
+from memory_integration import get_session, add_to_session, load_session_context, set_session_title, get_session_title
+
+# in-memory storage for current session context (temporary during request processing)
 conversation_history: list[dict[str, Any]] = []
-session_store: dict[str, list[dict]] = {}  # session_id -> list of messages
 
 
 # pydantic models, define shape of data coming in and out 
@@ -151,10 +157,13 @@ async def generate_streaming_response(request: ChatRequest) -> AsyncGenerator[st
     
     session_id = request.session_id or str(uuid.uuid4())
     
-    if session_id not in session_store:
-        session_store[session_id] = []
+    # Get persistent session messages from database
+    session_messages = get_session(session_id)
     
-    session_messages = session_store[session_id]
+    # Persist the initial chat title (derived from the first user message).
+    # Only set when empty, so the title is fixed on first use.
+    set_session_title(session_id, task)
+    
     start_time = datetime.now()
 
     try:
@@ -332,15 +341,9 @@ async def generate_streaming_response(request: ChatRequest) -> AsyncGenerator[st
             yield token_event
             await asyncio.sleep(0.01)  # Small delay for realistic streaming effect
         
-        # Add user message to session history
-        session_messages.append({
-            "role": "user",
-            "content": task,
-        })
-        session_messages.append({
-            "role": "assistant",
-            "content": answer,
-        })
+        # Add user and assistant messages to persistent session history
+        add_to_session(session_id, "user", task)
+        add_to_session(session_id, "assistant", answer)
 
         duration = (datetime.now() - start_time).total_seconds()
 
@@ -402,17 +405,43 @@ def clear_history():
     conversation_history.clear()
     return {"message": "History cleared"}
 
-# /session/{session_id}: GET, retrieve session history
-@api.get("/session/{session_id}")
-def get_session(session_id: str):
-    if session_id not in session_store:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return {"session_id": session_id, "messages": session_store[session_id]}
+# /sessions: GET, retrieve list of all sessions with message counts
+@api.get("/sessions")
+def list_sessions():
+    try:
+        sessions_list = sqlite_manager.list_sessions_with_counts()
+        sessions = []
+        for session in sessions_list:
+            sessions.append({
+                "session_id": session["session_id"],
+                "title": session["title"],
+                "message_count": session["message_count"],
+                "last_message_at": session["last_message_at"],
+            })
+        return {"sessions": sessions, "total": len(sessions)}
+    except Exception as e:
+        print(f"Error listing sessions: {e}")
+        return {"sessions": [], "total": 0}
 
-# /session/{session_id}: DELETE, clear a session
+# /session/{session_id}: GET, retrieve session history from persistent storage
+@api.get("/session/{session_id}")
+def get_session_endpoint(session_id: str):
+    messages = get_session(session_id)
+    title = get_session_title(session_id)
+    return {
+        "session_id": session_id,
+        "title": title,
+        "messages": messages if messages else [],
+    }
+
+# /session/{session_id}: DELETE, clear a session from persistent storage
 @api.delete("/session/{session_id}")
 def clear_session(session_id: str):
-    if session_id in session_store:
-        del session_store[session_id]
-        return {"message": f"Session {session_id} cleared"}
-    raise HTTPException(status_code=404, detail="Session not found")
+    try:
+        success = sqlite_manager.delete_session(session_id)
+        if success:
+            return {"status": "success", "message": f"Session {session_id} deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete session: {str(e)}")
