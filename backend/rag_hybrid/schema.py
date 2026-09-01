@@ -24,6 +24,7 @@ def get_schema_ddl():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             session_key TEXT UNIQUE NOT NULL,
+            title TEXT,
             started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             ended_at TIMESTAMP,
@@ -115,6 +116,25 @@ def get_schema_ddl():
             completed_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """,
+        
+        # Agent memory table - stores facts, experiences, and behavioral rules
+        """
+        CREATE TABLE IF NOT EXISTS agent_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            memory_type TEXT NOT NULL,
+            category TEXT,
+            key_concept TEXT NOT NULL,
+            content TEXT NOT NULL,
+            relevance_score REAL DEFAULT 1.0,
+            usage_count INTEGER DEFAULT 0,
+            last_used TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, memory_type, key_concept)
         )
         """
     ]
