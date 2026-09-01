@@ -10,7 +10,7 @@ from langchain_ollama import ChatOllama
 from langchain_core.messages import SystemMessage, HumanMessage
 from state import AgentState
 from config import config, resolve_model
-from memory_integration import compact_messages, truncate_text
+from memory_integration import compact_messages, truncate_text, format_memories_for_context
 import json
 
 
@@ -60,11 +60,17 @@ def router_node(state: AgentState) -> AgentState:
         extra_body={"think": False},
     )
     
-    # Build context message with session history
+    # Build context message with session history and agent memory
     context_parts = []
     
     if state.get("session_context"):
         context_parts.append(f"Session Context:\n{truncate_text(state['session_context'], 500)}")
+    
+    if state.get("agent_memory"):
+        memories = state.get("agent_memory", [])
+        formatted_memories = format_memories_for_context(memories)
+        if formatted_memories and formatted_memories != "No relevant memories found.":
+            context_parts.append(f"Agent Memory (Relevant Experiences):\n{truncate_text(formatted_memories, 400)}")
     
     if state.get("conversation_history"):
         recent_history = compact_messages(state["conversation_history"], max_messages=4, max_chars=160)
