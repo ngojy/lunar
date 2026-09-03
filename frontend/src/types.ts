@@ -3,7 +3,14 @@ export interface AgentModelSettings {
     [key: string]: string | undefined;
 }
 
-// AgentStep: one action taken by an agent
+// Agent memory settings
+export interface AgentMemorySettings {
+    enabled: boolean
+    autoStore: boolean  // Automatically store facts from conversations
+    autoRetrieve: boolean  // Automatically retrieve relevant memories for context
+}
+
+// Agent memory entry (from backend)
 export interface AgentStep {
     agent: string
     message: string
@@ -78,4 +85,5 @@ export interface ToolSettings {
     showAgentActivity: boolean
     userName: string
     ragSettings: RagSettings
+    agentMemorySettings: AgentMemorySettings
 }
