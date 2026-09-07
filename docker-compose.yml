@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: lunar-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/data:/app/data
+    environment:
+      - ENABLE_CHECKPOINTING=true
+      - CHECKPOINT_DB=/app/data/checkpoints.db
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    depends_on: []
+    restart: unless-stopped
